@@ -212,6 +212,11 @@ Structure (do NOT print these labels; just write the paragraphs):
    "about half a round further than a fair draw").
 4. Then a line containing only: ---DETAILS---  followed by everything else.
 
+- "Group of death" always means the quarter whose players lost the most expected
+  wins to the draw (the most negative quarter total, the one the chart labels).
+  If a different quarter has the strongest players, say that separately.
+- Never use the words "Eighth", "title equity", "brutal" or "massive" for small numbers.
+
 CALIBRATION (very important):
 - A title-chance change under 2 percentage points, or under 0.2 expected wins,
   means the draw "barely mattered" for that player. Say so plainly.
