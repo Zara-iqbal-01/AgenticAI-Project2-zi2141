@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Draw Luck · How much did the draw decide a Grand Slam?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+<style>
+  :root {
+    --surface-0: #f4f3ef; --surface-1: #fcfcfb; --line: #e2e0d9;
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #8a8984;
+    --court: #2f5d3a; --court-soft: #e6eee7;
+    --helped: #2a78d6; --hurt: #e34948; --mid: #f0efec;
+    --r-lead: #2a78d6; --r-scout: #eb6834; --r-stats: #1baf7a; --r-writer: #eda100; --r-clar: #e87ba4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-0: #121211; --surface-1: #1a1a19; --line: #2d2d2b;
+      --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+      --court: #8fc79b; --court-soft: #1f2a21;
+      --helped: #3987e5; --hurt: #e66767; --mid: #383835;
+      --r-lead: #3987e5; --r-scout: #d95926; --r-stats: #199e70; --r-writer: #c98500; --r-clar: #d55181;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Inter, system-ui, sans-serif; background: var(--surface-0); color: var(--text-primary); line-height: 1.5; }
+  a { color: var(--helped); }
+
+  /* --- Header --- */
+  header { border-bottom: 1px solid var(--line); background: var(--surface-1); }
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 1.5rem 1.5rem; }
+  .brand { display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+  .brand h1 { font-family: Fraunces, Georgia, serif; font-size: 2.1rem; letter-spacing: -0.02em; }
+  .brand h1 span { color: var(--court); }
+  .brand p { font-family: Fraunces, Georgia, serif; font-size: 1.15rem; color: var(--text-secondary); }
+  .about { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 1rem; font-size: 0.88rem; color: var(--text-secondary); }
+  .about b { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--court); margin-bottom: 0.2rem; }
+  @media (max-width: 800px) { .about { grid-template-columns: 1fr; } }
+
+  /* --- Layout --- */
+  main { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 1.25rem; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+  .panel { background: var(--surface-1); border: 1px solid var(--line); border-radius: 10px; }
+  .panel h2 { font-family: Fraunces, Georgia, serif; font-size: 1.05rem; font-weight: 500; }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 0.9rem 1.1rem; border-bottom: 1px solid var(--line); }
+  .hint { font-size: 0.78rem; color: var(--text-muted); }
+
+  /* --- Chat --- */
+  #chat { display: flex; flex-direction: column; min-height: 640px; }
+  #messages { flex: 1; overflow-y: auto; padding: 1.1rem; display: flex; flex-direction: column; gap: 1.1rem; max-height: 72vh; }
+  .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .chip { border: 1px solid var(--line); background: var(--surface-0); color: var(--text-primary); border-radius: 999px; padding: 0.4rem 0.8rem; font-size: 0.82rem; cursor: pointer; text-align: left; font-family: inherit; }
+  .chip:hover { border-color: var(--court); }
+  .msg.user { align-self: flex-end; background: var(--court-soft); padding: 0.6rem 0.9rem; border-radius: 12px 12px 2px 12px; max-width: 85%; }
+  .msg.bot { max-width: 100%; }
+  .msg.bot .status { color: var(--text-muted); font-size: 0.88rem; }
+  .report { font-size: 0.93rem; }
+  .report h1, .report h2, .report h3 { font-family: Fraunces, Georgia, serif; font-weight: 500; margin: 1rem 0 0.35rem; font-size: 1.05rem; }
+  .report p, .report ul, .report ol { margin: 0.4rem 0; }
+  .report ul, .report ol { padding-left: 1.2rem; }
+  .report code { font-size: 0.85em; background: var(--surface-0); padding: 0 0.25em; border-radius: 3px; }
+  .report a { word-break: break-all; }
+  .more { margin-top: 0.8rem; border-top: 1px solid #ddd; padding-top: 0.5rem; }
+  .more summary { cursor: pointer; font-size: 0.85rem; opacity: 0.75; }
+  .more summary:hover { opacity: 1; }
+  .cite { display: inline-block; font-size: 0.7rem; font-weight: 600; color: var(--court); background: var(--court-soft); border-radius: 4px; padding: 0 0.3rem; margin: 0 1px; cursor: pointer; vertical-align: 1px; }
+  #input-area { display: flex; gap: 0.6rem; padding: 0.9rem 1.1rem; border-top: 1px solid var(--line); }
+  #user-input { flex: 1; padding: 0.7rem 0.8rem; border: 1px solid var(--line); border-radius: 8px; font-size: 0.95rem; background: var(--surface-0); color: var(--text-primary); font-family: inherit; }
+  #user-input:focus { outline: 2px solid var(--court); outline-offset: -1px; }
+  button.primary { padding: 0 1.2rem; background: var(--court); color: var(--surface-1); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  button.ghost { background: none; border: 1px solid var(--line); border-radius: 6px; padding: 0.3rem 0.6rem; color: var(--text-secondary); cursor: pointer; font-size: 0.78rem; font-family: inherit; }
+  button:disabled { opacity: 0.4; cursor: default; }
+
+  /* --- Right column --- */
+  .side { display: flex; flex-direction: column; gap: 1.25rem; }
+  select { border: 1px solid var(--line); border-radius: 6px; padding: 0.3rem 0.5rem; background: var(--surface-0); color: var(--text-primary); font-family: inherit; font-size: 0.82rem; }
+  .chart-box { padding: 0.8rem 1.1rem 1rem; }
+  .legend { display: flex; gap: 1rem; font-size: 0.78rem; color: var(--text-secondary); margin: 0.2rem 0 0.4rem; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 0.35rem; vertical-align: -1px; }
+  svg text { font-family: Inter, system-ui, sans-serif; }
+  .quarters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 0.6rem; }
+  .q { font-size: 0.75rem; color: var(--text-secondary); border-top: 2px solid var(--line); padding-top: 0.35rem; }
+  .q strong { color: var(--text-primary); font-size: 0.85rem; }
+  .q.death { border-top-color: var(--hurt); }
+  details { margin-top: 0.7rem; font-size: 0.8rem; color: var(--text-secondary); }
+  details table { width: 100%; border-collapse: collapse; margin-top: 0.4rem; }
+  details td, details th { text-align: left; padding: 0.2rem 0.3rem; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  #tip { position: fixed; pointer-events: none; background: var(--surface-1); border: 1px solid var(--line); border-radius: 8px; padding: 0.55rem 0.7rem; font-size: 0.8rem; box-shadow: 0 6px 20px rgba(0,0,0,.12); display: none; z-index: 10; max-width: 280px; }
+  #tip .v { font-size: 1rem; font-weight: 600; }
+  #tip .s { color: var(--text-secondary); }
+  #trace-detail { margin: 0 1.1rem 1rem; font-family: ui-monospace, monospace; font-size: 0.72rem; background: var(--surface-0); border-radius: 6px; padding: 0.6rem; white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow: auto; display: none; color: var(--text-secondary); }
+  .timeline-box { padding: 0.6rem 1.1rem 0.8rem; }
+  .empty { color: var(--text-muted); font-size: 0.85rem; padding: 0.4rem 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <h1>Draw <span>Luck</span></h1>
+      <p>How much did the draw decide a tennis Grand Slam?</p>
+    </div>
+    <div class="about">
+      <div><b>What it explores</b>Every men's and women's Grand Slam draw from 2015 to 2026 Roland Garros. Each draw is played 20,000 times with pre-tournament surface Elo, then compared with 20,000 random draws under the same seeding rules. The difference is the player's draw luck.</div>
+      <div><b>Who it's for</b>Tennis fans, journalists and analysts who want to know whether the draw robbed a favorite, which quarter was the group of death, and which dangerous players the rankings hid.</div>
+      <div><b>How to use it</b>Ask about a specific Slam ("Wimbledon 2024 men's") or a pattern across Slams. A Lead agent sends researchers out in parallel, and a Writer cites every claim. Vague questions get a clarifying question back. Answers take 1–3 minutes.</div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <main>
+    <section class="panel" id="chat">
+      <div class="panel-head">
+        <h2>Ask the research team</h2>
+        <button class="ghost" id="new-btn">New conversation</button>
+      </div>
+      <div id="messages">
+        <div class="chips" id="examples"></div>
+      </div>
+      <div id="input-area">
+        <input type="text" id="user-input" placeholder="e.g. Who had the toughest draw at the 2025 US Open women's?" autocomplete="off" />
+        <button class="primary" id="send-btn">Ask</button>
+      </div>
+    </section>
+
+    <div class="side">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>The draw, slot by slot</h2>
+          <select id="slam-select" aria-label="Choose a Slam"></select>
+        </div>
+        <div class="chart-box">
+          <div class="hint" id="slam-caption"></div>
+          <div class="legend">
+            <span><i style="background:var(--helped)"></i>Draw helped (expected wins gained)</span>
+            <span><i style="background:var(--hurt)"></i>Draw hurt (expected wins lost)</span>
+            <span>★ champion</span>
+          </div>
+          <div id="luck-chart"></div>
+          <div class="quarters" id="quarters"></div>
+          <details><summary>Show as table</summary><div id="luck-table"></div></details>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>How the team worked</h2>
+          <span class="hint" id="trace-status">Each bar is one tool call. Click a bar for details.</span>
+        </div>
+        <div class="timeline-box"><div id="timeline"><div class="empty">Ask a question to watch the agents work.</div></div></div>
+        <pre id="trace-detail"></pre>
+      </section>
+    </div>
+  </main>
+</div>
+<div id="tip"></div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const messages = $("messages"), userInput = $("user-input"), sendBtn = $("send-btn");
+  let sessionId = crypto.randomUUID();
+  let lastCalls = [];
+
+  const EXAMPLES = [
+    "How much did the draw hurt Jannik Sinner at Wimbledon 2024?",
+    "Which quarter was the group of death at the 2025 US Open men's?",
+    "Which dangerous players did the rankings hide at Roland Garros 2024 women's?",
+    "What if Alcaraz had been in Djokovic's spot at Wimbledon 2023?",
+    "Which top-4 seed had the unluckiest draws since 2015?",
+    "Who got unlucky?",
+  ];
+  for (const q of EXAMPLES) {
+    const b = document.createElement("button");
+    b.className = "chip"; b.textContent = q;
+    b.onclick = () => { userInput.value = q; send(); };
+    $("examples").appendChild(b);
+  }
+
+  // ---------- Chat ----------
+  function addUser(text) {
+    const div = document.createElement("div");
+    div.className = "msg user"; div.textContent = text;
+    messages.appendChild(div); messages.scrollTop = messages.scrollHeight;
+  }
+
+  function renderReport(container, md) {
+    // Markdown -> sanitized HTML; [F2] / [F1, F3] become clickable citation chips
+    let html = DOMPurify.sanitize(marked.parse(md || ""));
+    html = html.replace(/\[((?:F\d+)(?:\s*,\s*F\d+)*)\]/g, (_, ids) =>
+      ids.split(/\s*,\s*/).map((id) => `<span class="cite" data-f="${id}" title="Show finding ${id}">${id}</span>`).join(""));
+    container.innerHTML = html;
+    container.querySelectorAll("a").forEach((a) => { a.target = "_blank"; a.rel = "noopener"; });
+    container.querySelectorAll(".cite").forEach((c) => c.onclick = () => showFinding(c.dataset.f));
+  }
+
+  function showFinding(fid) {
+    const call = lastCalls.find((c) => c.agent === "Lead" && (c.result || "").startsWith(`[${fid}]`));
+    if (call) showDetail(call);
+  }
+
+  async function send() {
+    const text = userInput.value.trim();
+    if (!text) return;
+    userInput.value = ""; sendBtn.disabled = true;
+    addUser(text);
+    const bot = document.createElement("div");
+    bot.className = "msg bot";
+    bot.innerHTML = '<div class="status">Reading your question…</div>';
+    messages.appendChild(bot); messages.scrollTop = messages.scrollHeight;
+
+    const poll = setInterval(async () => {
+      try {
+        const p = await (await fetch(`/progress/${sessionId}`)).json();
+        if (p.calls.length) { renderTimeline(p.calls, true); bot.querySelector(".status").textContent = statusLine(p.calls); }
+      } catch (e) {}
+    }, 1200);
+
+    try {
+      const res = await fetch("/chat", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, session_id: sessionId }),
+      });
+      const data = await res.json();
+      sessionId = data.session_id;
+      lastCalls = data.tool_calls || [];
+      const [main, details] = (data.response || "").split("---DETAILS---");
+      bot.innerHTML = '<div class="report"></div>';
+      renderReport(bot.querySelector(".report"), main);
+      if (details && details.trim()) {
+        const more = document.createElement("details");
+        more.className = "more";
+        more.innerHTML = '<summary>Show the numbers</summary><div class="report"></div>';
+        bot.appendChild(more);
+        renderReport(more.querySelector(".report"), details);
+      }
+      renderTimeline(lastCalls, false);
+      if (data.slam_ids && data.slam_ids.length) { $("slam-select").value = data.slam_ids[0]; loadDraw(data.slam_ids[0]); }
+    } catch (e) {
+      bot.innerHTML = ""; bot.textContent = "Error: " + e.message;
+    }
+    clearInterval(poll);
+    sendBtn.disabled = false; userInput.focus();
+  }
+
+  function statusLine(calls) {
+    const researchers = new Set(calls.filter((c) => /Researcher/.test(c.agent)).map((c) => c.agent));
+    if (calls.some((c) => c.agent === "Writer")) return "The Writer is drafting the report…";
+    if (researchers.size) return `${researchers.size} researcher${researchers.size > 1 ? "s" : ""} at work · ${calls.length} tool calls so far…`;
+    return "The Lead is planning sub-questions…";
+  }
+
+  sendBtn.addEventListener("click", send);
+  userInput.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
+  $("new-btn").onclick = async () => {
+    await fetch(`/clear?session_id=${sessionId}`, { method: "POST" });
+    sessionId = crypto.randomUUID();
+    [...messages.querySelectorAll(".msg")].forEach((m) => m.remove());
+    $("timeline").innerHTML = '<div class="empty">Ask a question to watch the agents work.</div>';
+    $("trace-detail").style.display = "none";
+  };
+
+  // ---------- Tooltip ----------
+  const tip = $("tip");
+  function showTip(evt, rows) {
+    tip.replaceChildren(...rows.map(([cls, text]) => { const d = document.createElement("div"); d.className = cls; d.textContent = text; return d; }));
+    tip.style.display = "block";
+    const x = Math.min(evt.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+    tip.style.left = x + "px"; tip.style.top = (evt.clientY + 14) + "px";
+  }
+  const hideTip = () => (tip.style.display = "none");
+
+  // ---------- Draw luck strip ----------
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; };
+  const pct = (x) => (x * 100).toFixed(1) + "%";
+
+  async function loadSlams() {
+    const slams = await (await fetch("/api/slams")).json();
+    const sel = $("slam-select");
+    for (const s of [...slams].reverse()) {
+      const o = document.createElement("option");
+      o.value = s.slam_id; o.textContent = `${s.year} ${s.slam} · ${s.tour === "ATP" ? "Men" : "Women"}`;
+      sel.appendChild(o);
+    }
+    sel.value = slams.some((s) => s.slam_id === "2024-WIM-ATP") ? "2024-WIM-ATP" : slams[slams.length - 1].slam_id;
+    sel.onchange = () => loadDraw(sel.value);
+    loadDraw(sel.value);
+  }
+
+  async function loadDraw(slamId) {
+    const res = await fetch(`/api/draw/${slamId}`);
+    if (!res.ok) return;
+    const { slam, players } = await res.json();
+    $("slam-caption").textContent = `${slam.year} ${slam.slam} (${slam.tour === "ATP" ? "men" : "women"}) · ${slam.surface} · champion ${slam.champion}. Bars run in draw order, top of the draw on the left.`;
+    drawStrip(players);
+    drawQuarters(players);
+    drawTable(players);
+  }
+
+  function drawStrip(players) {
+    const box = $("luck-chart"); box.innerHTML = "";
+    const W = box.clientWidth || 560, H = 230, top = 22, bottom = 22, n = players.length;
+    const maxAbs = Math.max(0.5, ...players.map((p) => Math.abs(p.luck_wins)));
+    const y0 = top + (H - top - bottom) / 2, scale = (H - top - bottom) / 2 / maxAbs;
+    const step = W / n, bw = Math.max(1.5, step - 1);
+    const svg = el("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Draw luck by draw position" }, box);
+
+    // quarter bands + labels
+    for (let q = 0; q < 4; q++) {
+      const x = (q * n / 4) * step;
+      if (q) el("line", { x1: x, x2: x, y1: top - 6, y2: H - bottom + 4, stroke: "var(--line)", "stroke-dasharray": "3 3" }, svg);
+      el("text", { x: x + 4, y: 12, "font-size": 10, fill: "var(--text-muted)" }, svg).textContent = `Q${q + 1}`;
+    }
+    el("line", { x1: 0, x2: W, y1: y0, y2: y0, stroke: "var(--text-muted)", "stroke-width": 0.75 }, svg);
+    el("text", { x: W - 2, y: top - 8, "font-size": 9, "text-anchor": "end", fill: "var(--text-muted)" }, svg).textContent = `+${maxAbs.toFixed(1)} wins`;
+    el("text", { x: W - 2, y: H - 6, "font-size": 9, "text-anchor": "end", fill: "var(--text-muted)" }, svg).textContent = `−${maxAbs.toFixed(1)} wins`;
+
+    players.forEach((p, i) => {
+      const v = p.luck_wins, h = Math.max(1, Math.abs(v) * scale), x = i * step;
+      const bar = el("rect", { x: x + (step - bw) / 2, y: v >= 0 ? y0 - h : y0, width: bw, height: h, rx: Math.min(2, bw / 2),
+        fill: v >= 0 ? "var(--helped)" : "var(--hurt)", opacity: p.seed ? 1 : 0.55 }, svg);
+      if (p.actual_result === "W") el("text", { x: x + step / 2, y: v >= 0 ? y0 - h - 4 : y0 + h + 11, "font-size": 11, "text-anchor": "middle", fill: "var(--text-primary)" }, svg).textContent = "★";
+      // hit target: full column, bigger than the mark
+      const hit = el("rect", { x, y: top, width: step, height: H - top - bottom, fill: "transparent", tabindex: 0 }, svg);
+      const show = (e) => { bar.setAttribute("stroke", "var(--text-primary)"); showTip(e, [
+        ["v", `${v >= 0 ? "+" : ""}${v.toFixed(2)} expected wins`],
+        ["", `${p.player}${p.seed ? " · seed " + p.seed : ""}${p.entry ? " · " + p.entry : ""}`],
+        ["s", `Title chance ${pct(p.p_W_real)} in this draw vs ${pct(p.p_W_random)} in a random draw`],
+        ["s", `Rank ${p.rank ?? "–"} · Elo rank in field ${p.elo_rank_in_field} · went out in ${p.actual_result === "W" ? "— won it" : p.actual_result}`],
+      ]); };
+      hit.addEventListener("pointermove", show);
+      hit.addEventListener("focus", (e) => { const r = hit.getBoundingClientRect(); show({ clientX: r.right, clientY: r.top }); });
+      hit.addEventListener("pointerleave", () => { bar.removeAttribute("stroke"); hideTip(); });
+      hit.addEventListener("blur", () => { bar.removeAttribute("stroke"); hideTip(); });
+    });
+
+    // direct labels: the two biggest losers and gainers among seeds
+    const seeded = players.map((p, i) => ({ ...p, i })).filter((p) => p.seed);
+    const pick = [...seeded].sort((a, b) => a.luck_wins - b.luck_wins).slice(0, 2)
+      .concat([...seeded].sort((a, b) => b.luck_wins - a.luck_wins).slice(0, 2));
+    // Labels sit beside the bar end, clamped inside the plot; skip one that would collide with another
+    const placed = [];
+    for (const p of pick) {
+      const up = p.luck_wins >= 0, h = Math.abs(p.luck_wins) * scale;
+      const x = Math.min(Math.max(p.i * step + step / 2, 34), W - 34);
+      const y = Math.min(Math.max(up ? y0 - h - 6 : y0 + h + 13, top + 10), H - bottom + 12);
+      if (placed.some((q) => Math.abs(q.x - x) < 70 && Math.abs(q.y - y) < 14)) continue;
+      placed.push({ x, y });
+      el("text", { x, y, "font-size": 10, "text-anchor": "middle", fill: "var(--text-secondary)",
+        stroke: "var(--surface-1)", "stroke-width": 3, "paint-order": "stroke" }, svg).textContent = p.player.split(" ").slice(-1)[0];
+    }
+  }
+
+  function drawQuarters(players) {
+    const qs = [1, 2, 3, 4].map((q) => {
+      const ps = players.filter((p) => p.quarter === q);
+      const luck = ps.reduce((s, p) => s + p.luck_wins, 0);
+      const topSeed = ps.filter((p) => p.seed).sort((a, b) => a.seed - b.seed)[0];
+      return { q, luck, topSeed };
+    });
+    const worst = Math.min(...qs.map((x) => x.luck));
+    $("quarters").replaceChildren(...qs.map(({ q, luck, topSeed }) => {
+      const d = document.createElement("div");
+      d.className = "q" + (luck === worst && luck < -0.5 ? " death" : "");
+      const s = document.createElement("strong"); s.textContent = `Q${q}: ${luck >= 0 ? "+" : ""}${luck.toFixed(2)}`;
+      d.append(s, document.createElement("br"), document.createTextNode(topSeed ? `top seed ${topSeed.player}` : ""));
+      if (luck === worst && luck < -0.5) d.append(document.createElement("br"), document.createTextNode("group of death"));
+      return d;
+    }));
+  }
+
+  function drawTable(players) {
+    const rows = [...players].sort((a, b) => a.luck_wins - b.luck_wins);
+    const pickRows = rows.slice(0, 8).concat(rows.slice(-8).reverse());
+    const t = document.createElement("table");
+    const head = t.insertRow(); ["Player", "Seed", "Luck (wins)", "Title: draw", "Title: random", "Result"].forEach((h) => { const th = document.createElement("th"); th.textContent = h; head.appendChild(th); });
+    for (const p of pickRows) {
+      const r = t.insertRow();
+      [p.player, p.seed ?? "", p.luck_wins.toFixed(2), pct(p.p_W_real), pct(p.p_W_random), p.actual_result].forEach((v) => { r.insertCell().textContent = v; });
+    }
+    $("luck-table").replaceChildren(t);
+  }
+
+  // ---------- Agent timeline ----------
+  const ROLE = (agent) => agent.startsWith("Lead") ? "lead" : agent.startsWith("Scout") ? "scout" : agent.startsWith("Stats") ? "stats" : agent.startsWith("Writer") ? "writer" : "clar";
+
+  function renderTimeline(calls, live) {
+    const box = $("timeline"); box.innerHTML = "";
+    if (!calls.length) return;
+    const lanes = [];
+    for (const c of calls) if (!lanes.includes(c.agent)) lanes.push(c.agent);
+    const order = (a) => ["clar", "lead", "stats", "scout", "writer"].indexOf(ROLE(a)) * 100 + (parseInt((a.match(/F(\d+)/) || [0, 0])[1]));
+    lanes.sort((a, b) => order(a) - order(b));
+    const W = box.clientWidth || 560, labelW = 150, laneH = 22, H = lanes.length * laneH + 24;
+    const tMax = Math.max(1, ...calls.map((c) => c.end_s));
+    const x = (t) => labelW + (t / tMax) * (W - labelW - 8);
+    const svg = el("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Timeline of agent tool calls" }, box);
+
+    lanes.forEach((lane, i) => {
+      const y = i * laneH;
+      el("text", { x: 0, y: y + 15, "font-size": 11, fill: "var(--text-secondary)" }, svg).textContent = lane;
+      el("line", { x1: labelW, x2: W, y1: y + laneH - 1, y2: y + laneH - 1, stroke: "var(--line)" }, svg);
+    });
+    for (const c of calls) {
+      const i = lanes.indexOf(c.agent), y = i * laneH + 5;
+      const r = el("rect", { x: x(c.start_s), y, width: Math.max(3, x(c.end_s) - x(c.start_s)), height: laneH - 10, rx: 3,
+        fill: `var(--r-${ROLE(c.agent)})`, tabindex: 0, style: "cursor:pointer" }, svg);
+      r.addEventListener("pointermove", (e) => showTip(e, [["v", c.name], ["", c.agent], ["s", `${c.start_s.toFixed(1)}s → ${c.end_s.toFixed(1)}s`]]));
+      r.addEventListener("pointerleave", hideTip);
+      r.addEventListener("click", () => showDetail(c));
+      r.addEventListener("keydown", (e) => { if (e.key === "Enter") showDetail(c); });
+    }
+    for (let t = 0; t <= tMax; t += tMax > 90 ? 30 : tMax > 20 ? 10 : 1) {
+      el("text", { x: x(t), y: H - 6, "font-size": 9, "text-anchor": "middle", fill: "var(--text-muted)" }, svg).textContent = `${t}s`;
+    }
+    const parallel = Math.max(...calls.filter((c) => c.agent === "Lead").map((c) =>
+      calls.filter((d) => d.agent === "Lead" && d.start_s < c.end_s && d.end_s > c.start_s).length), 0);
+    $("trace-status").textContent = live ? `Working… ${calls.length} tool calls so far`
+      : `${calls.length} tool calls in ${tMax.toFixed(0)}s${parallel > 1 ? ` · up to ${parallel} researchers in parallel` : ""}. Click a bar for details.`;
+  }
+
+  function showDetail(c) {
+    const d = $("trace-detail");
+    d.style.display = "block";
+    d.textContent = `${c.agent} → ${c.name}(${JSON.stringify(c.args, null, 1)})\n\n${c.result ?? "(still running)"}`;
+    d.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  loadSlams();
+  window.addEventListener("resize", () => { const s = $("slam-select").value; if (s) loadDraw(s); if (lastCalls.length) renderTimeline(lastCalls, false); });
+  userInput.focus();
+</script>
+</body>
+</html>
